@@ -1,0 +1,124 @@
+# 开启某一轴的power
+
+# Example: 
+"EO = 1"
+
+EO1或者0 = 1     # X axis
+EO2 = 1     # Y axis
+EO3 = 1     # Z axis 
+
+
+# 停止
+
+"ABORT\x00"       # 立即停止所有轴的运动，如果控制器当前正在执行任何运动，该命令会使所有轴立刻停止。它还会 关闭缓冲移动模式 (Buffered Move)，即清除缓冲区中的所有待执行移动指令。
+"ABORTX"          # 停止X轴
+
+
+# 不同模式
+
+"ABS"     # Set the move mode to absolute mode.
+            ABS
+            X1000 ;move to position 1000
+
+"INC"     # Set the move mode to incremental mode.
+            INC
+            X1000 ;increment by 1000
+
+"BF"      # Disable buffered mode. (A scan); A-scan 可能需要在 每个点停下来测量，然后再移动到下一个点，因此可以关闭缓冲模式 (BF).
+          example :
+
+          send_command("BO")
+          positions = [0, 100, 200, 300, 400]
+
+          for pos in positions:
+             send_command(f"X{pos}")  # 移动到目标位置
+             time.sleep(0.5)  # 等待稳定
+             send_command("MEASURE")  # 采集数据（假设有该命令）
+
+"BO"      # Enable buffer mode. (B scan); B-scan 需要连续采样，因此应 开启缓冲模式 (BO)，避免移动过程停顿：
+          example:
+
+          # 开启缓冲模式（确保运动流畅）
+          send_command("BO")
+
+          # 让 X 轴连续移动，同时扫描
+          for i in range(0, 500, 50):  # 例如 X 轴从 0 到 500，每次 50 步
+             send_command(f"X{i}")  # 发送插补移动命令（连续扫描）
+
+          # 关闭缓冲模式（停止连续扫描）
+          send_command("BF")
+
+# 查询
+
+"ACC"     # 命令用于 获取当前全局加速度设置，单位为 毫秒 (ms)。加速度值表示电机从低速加速到高速所需的时间。（Return the current global acceleration in milliseconds.）
+"ACCX"    # Return current individual X axis acceleration in milliseconds. 
+          # Example:
+            acceleration_x = send_command("ACCX")
+            print(f"X Axis Acceleration: {acceleration_x} ms")
+"DEC"     # Return the current global deceleration in milliseconds. 
+"DECX"    # Return current individual X axis deceleration in milliseconds. 
+"DI"      # Return the status of the digital inputs. Refer to Table 6-4
+"DI[1-8]" # Return the bit status of general purpose digital input.
+"DIP"     # Return the digital input polarity.（0 代表被触发，1 代表未触发）
+"DXX"     # Return the StepNLoop delta value of X axis.
+"EDEC"    # Return the enable unique deceleration status. [0（默认） → 未启用，所有轴使用全局减速度 (DEC) 设定的减速度值。1 → 已启用，每个轴可以使用单独的减速度 (DECX, DECY, DECZ, DECU)。]
+"EOBOOT"  # Return the EO configuration at boot-up. Refer to Table 6-2
+"HS"      # Return the global high speed setting.
+"HS[axis]"# Return the individual high speed setting.
+"IACC"    # Return the automatic acceleration setting during buffered interpolated move status.插补运动
+"LS"      # Return the global low speed setting.
+"LS[axis]"  # Return the individual low speed setting.
+"MST"     # Returns all motor status, buffer move status, and move mode status for all axis.  Refer to Table 6-3
+"PP"      # Returns current pulse counter values of all axis. [X Pulse Position]:   实际位置和指令位置差异
+                                                              [Y Pulse Position]:
+                                                              [Z Pulse Position]:
+                                                              [U Pulse Position].
+“PS”      # Returns current pulse speed values of all axis. [X Speed]:     命令用于 查询所有轴的当前脉冲速度（Pulse Speed），即：
+                                                            [Y Speed]: 控制器 当前为 X、Y、Z、U 轴发送的脉冲频率（速度）。
+                                                            [Z Speed]: 该值 反映了每个轴的实时运动速度，通常以 脉冲/秒（pps） 为单位。
+                                                            [U Speed]  📌 如果 PS=0，说明该轴当前处于停止状态。 📌 如果 PS 值大，说明该轴正在高速运行。
+
+
+# 与速度相关
+
+"ACC=500"    # Set global acceleration in 500 milliseconds.
+"ACCX=400"   # Set individual X axis acceleration in 400 milliseconds.
+"DEC=500"    # Set global deceleration in 500 milliseconds.
+"DECX=400"   # Set individual X axis deceleration in 400 milliseconds.
+"EDEC=0"     # Set the enabled unique deceleration status.
+"HS=[value]" # Set the global high speed. 
+"HS[axis]=[value]"  # Sets individual high speed.
+"IACC=[0,1]" # Set the automatic acceleration setting during buffer interpolated move status.插补运动
+"LS=[value]" # Set the global low speed.
+"LS[axis]=[value]"   #Set the individual low speed.
+
+
+# 清除错误
+
+"CLRX"       # Clear the X axis limit, alarm, or StepNLoop error status bit.
+
+example:
+# 1. 读取电机状态，检查是否有错误
+motor_status = send_command("MST")
+
+# 2. 如果 X 轴有错误，则清除
+if "7" in motor_status:  # 假设 7 对应限位错误
+    send_command("CLRX")
+
+# 3. 再次检查是否清除成功
+new_status = send_command("MST")
+print(f"New Motor Status: {new_status}")
+
+
+# 归零
+
+"H[axis][+/-][mode]"   # Homes the motor in plus [+] or minus [-] direction using the specified homing mode.
+
+
+# 运动
+
+"I[X axis]:[Y axis]:[Z axis]:[speed]" 插补运动；让 X、Y、Z 轴按照设定的目标位置同步运动，以确保各轴之间的运动轨迹平滑。最后一个参数是运动的恒定速度，确保整个路径上的速度一致。必须开启缓冲模式（BO）才能执行插补运动。
+
+XYZ interpolated move. Target move values are separated by ‘:’ character. Last value is the constant speed that will be used in the move. Buffer mode must be enabled.
+
+

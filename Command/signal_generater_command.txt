@@ -1,0 +1,31 @@
+sg = 
+
+sg.arb_advance = "TRIG"      # 波形模式："TRIG"(trigger signal) or "SRAT"(continuous).
+sg.trigger_source = "BUS"    # "IMM" (Atuo trigger with certain period) or "EXT" (external trigger) or "BUS"（remote trigger）
+sg.burst_mode = "TRIG"       # String property that controls the burst mode. "TRIG"(trigger), "GAT"（gate mode）.
+sg.burst_state = True        # Boolean property that controls whether the burst mode is on (True) or off (False).
+sg.burst_ncycles = 6         # Set the number of cycles to be output when a burst is triggered. Range: 1 to 100000.
+sg.shape = "Sin"             # A string property that controls the output waveform. Can be set to: SIN<USOID>, SQU<ARE>, TRI<ANGLE>, RAMP, PULS<E>, PRBS, NOIS<E>, ARB, DC.
+sg.frequency = 1000(10e3)    # Sin(10^-6 to 120*10^6), Square(10^-6 to 50*10^6), Triangle(10^-6 to 10^6)
+sg.amplitude = x
+
+sg.output = True             # A boolean property that turns on (True) or off (False) the output of the function generator.
+sg.trigger()                 # Send a trigger signal to the function generator.
+sg.wait_for_trigger(timeout=30, should_stop = stop_condition)   # Wait until the triggering has finished or timeout is reached.
+
+sg.offset = 0                # Control the voltage offset of the output waveform in V, from 0 V to 4.995 V
+sg.phase = 90                # A floating point property that controls the phase of the output waveform in degrees, from -360 to 360.
+sg.display = f"Signal: {sg.frequency} Hz, {sg.amplitude} V"      # A string property which is displayed on the front panel of the device.
+sg.ext_trig_out = True       # Boolean property that controls whether the trigger out signal is on (True) or off (False).
+
+
+example:
+
+import time
+
+def stop_condition():
+    return time.time() % 10 == 0  # 每逢 10 秒整时停止等待
+
+sg.trigger()
+sg.wait_for_trigger(timeout=30, should_stop=stop_condition)
+print("Trigger completed or manually stopped.")
